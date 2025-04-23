@@ -8,32 +8,32 @@ def inference_service(context, vector_store_settings=None):
     """
     Default inference AI service function.
 
-    :param vector_store_settings: Vector store settings, such as `connection_id`, `collection_name` and scope identifier: space_id/project_id,
+    :param vector_store_settings: Vector store settings, such as `connection_id`, `index_name` and scope identifier: space_id/project_id,
                                  encapsulated in a dictionary. Setting these parameters when creating deployment one can overwrite the defaults.
     :type vector_store_settings: dict, optional
 
     .. code-block:: python
 
-        from ibm_watsonx_ai import APIClient, Credentials
+            from ibm_watsonx_ai import APIClient, Credentials
 
-        client = APIClient(
-            credentials=Credentials(url="<url>", token="<token>"), space_id=space_id
-        )
+            client = APIClient(
+                credentials=Credentials(url="<url>", token="<token>"), space_id=space_id
+            )
 
-        meta_props = {
-            client.deployments.ConfigurationMetaNames.NAME: "SAMPLE DEPLOYMENT NAME",
-            client.deployments.ConfigurationMetaNames.ONLINE: {
-                "parameters": {
-                    "vector_store_settings": {
-                        "connection_id": "<connection_to_vector_store>",
-                        "collection_name": "<collection_name>",
-                        "project_id": "<project_id>",
+            meta_props = {
+                client.deployments.ConfigurationMetaNames.NAME: "SAMPLE DEPLOYMENT NAME",
+                client.deployments.ConfigurationMetaNames.ONLINE: {
+                    "parameters": {
+                        "vector_store_settings": {
+                            "connection_id": "<connection_to_vector_store>",
+                            "index_name": "<index_name>",
+                            "project_id": "<project_id>",
+                        }
                     }
-                }
-            },
-        }
+                },
+            }
 
-        deployment_details = client.deployments.create(ai_service_id, meta_props)
+            deployment_details = client.deployments.create(ai_service_id, meta_props)
 
     Input schema:
     payload = {
@@ -66,15 +66,9 @@ def inference_service(context, vector_store_settings=None):
     """
     from ibm_watsonx_ai import APIClient, Credentials
     from ibm_watsonx_ai.foundation_models import ModelInference
-    from ibm_watsonx_ai.foundation_models.extensions.rag import Retriever
-    from ibm_watsonx_ai.foundation_models.extensions.rag.vector_stores import (
-        MilvusVectorStore,
-    )
+    from ibm_watsonx_ai.foundation_models.extensions.rag import Retriever, VectorStore
     from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.prompt_builder import (
         build_prompt,
-    )
-    from ibm_watsonx_ai.foundation_models.extensions.rag.utils import (
-        get_max_input_tokens,
     )
 
     vector_store_settings = (
@@ -105,9 +99,7 @@ def inference_service(context, vector_store_settings=None):
     # update vector store init data
     vector_store_init_data |= vector_store_settings
 
-    vector_store = MilvusVectorStore.from_dict(
-        api_client=client, data=vector_store_init_data
-    )
+    vector_store = VectorStore.from_dict(client=client, data=vector_store_init_data)
     retriever = Retriever.from_vector_store(
         vector_store=vector_store, init_parameters=REPLACE_THIS_CODE_WITH_RETRIEVER
     )
@@ -120,10 +112,7 @@ def inference_service(context, vector_store_settings=None):
     )
 
     build_prompt_additional_kwargs = dict(
-        model_max_input_tokens=get_max_input_tokens(
-            model=model,
-            default_max_sequence_length=REPLACE_THIS_CODE_WITH_DEFAULT_MAX_SEQUENCE_LENGTH,
-        ),
+        model_max_input_tokens=REPLACE_THIS_CODE_WITH_DEFAULT_MAX_SEQUENCE_LENGTH,
         prompt_template_text=REPLACE_THIS_CODE_WITH_PROMPT_TEMPLATE_TEXT,
         context_template_text=REPLACE_THIS_CODE_WITH_CONTEXT_TEMPLATE_TEXT,
     )
@@ -169,11 +158,7 @@ def inference_service(context, vector_store_settings=None):
 
         question = messages[-1]["content"]
 
-        retrieved_docs = retriever.retrieve(
-            query=question,
-            ranker_type=REPLACE_THIS_CODE_WITH_VECTOR_STORE_MILVUS_RANKER_TYPE,
-            ranker_params=REPLACE_THIS_CODE_WITH_VECTOR_STORE_MILVUS_RANKER_PARAMS,
-        )
+        retrieved_docs = retriever.retrieve(query=question)
         reference_documents = [doc.page_content for doc in retrieved_docs]
 
         prompt_input_text = build_prompt(
@@ -227,11 +212,7 @@ def inference_service(context, vector_store_settings=None):
 
         question = messages[-1]["content"]
 
-        retrieved_docs = retriever.retrieve(
-            query=question,
-            ranker_type=REPLACE_THIS_CODE_WITH_VECTOR_STORE_MILVUS_RANKER_TYPE,
-            ranker_params=REPLACE_THIS_CODE_WITH_VECTOR_STORE_MILVUS_RANKER_PARAMS,
-        )
+        retrieved_docs = retriever.retrieve(query=question)
         reference_documents = [doc.page_content for doc in retrieved_docs]
 
         prompt_input_text = build_prompt(

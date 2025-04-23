@@ -1226,7 +1226,11 @@ class Deployments(WMLResource):
                     if status != "initializing" and status != "updating":
                         break
 
-            if status == "ready":
+            if (
+                status == "ready"
+                and "failure" not in deployment_details["entity"]["status"]
+            ):
+                # from apidocs: If any failures, deployment will be reverted back to the previous id/rev and the failure message will be captured in 'failure' field in the response.
                 print("")
                 print_text_header_h2(
                     "Successfully finished deployment update, deployment_id='{}'".format(

@@ -73,9 +73,6 @@ def inference_service(context, vector_store_settings=None):
     from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.prompt_builder import (
         build_prompt,
     )
-    from ibm_watsonx_ai.foundation_models.extensions.rag.utils import (
-        get_max_input_tokens,
-    )
 
     vector_store_settings = (
         dict(vector_store_settings) if vector_store_settings is not None else {}
@@ -120,10 +117,7 @@ def inference_service(context, vector_store_settings=None):
     )
 
     build_prompt_additional_kwargs = dict(
-        model_max_input_tokens=get_max_input_tokens(
-            model=model,
-            default_max_sequence_length=REPLACE_THIS_CODE_WITH_DEFAULT_MAX_SEQUENCE_LENGTH,
-        ),
+        model_max_input_tokens=REPLACE_THIS_CODE_WITH_DEFAULT_MAX_SEQUENCE_LENGTH,
         prompt_template_text=REPLACE_THIS_CODE_WITH_PROMPT_TEMPLATE_TEXT,
         context_template_text=REPLACE_THIS_CODE_WITH_CONTEXT_TEMPLATE_TEXT,
     )

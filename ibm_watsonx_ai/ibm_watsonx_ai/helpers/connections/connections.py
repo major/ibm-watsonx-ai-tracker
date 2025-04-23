@@ -362,45 +362,23 @@ class DataConnection(BaseDataConnection):
 
         return conn
 
-    def _get_file_paths_from_nfs_folder(self) -> list[str]:
-        """Returns file paths (keys) of objects that are stored at a NFS/ Storage Volume location.
+    def _get_paths_from_location(self, include_folders: bool = False) -> list[str]:
+        """Returns file and folder (optional) paths (keys) of objects that are stored at a NFS / Storage Volume or bucket location.
 
-        Returns all file paths under the ``self.location.get_location()`` prefix.
+        The following 'location' types are supported: `S3Location`, `ContainerLocation`, `NFSLocation`.
+
+        Returns all file and folder (optional) paths under the ``self.location.get_location()`` prefix.
         First checks if the prefix exists as a bucket "directory" - if not, treats prefix as the file name.
 
-        :return: list of file names (keys) of objects in a bucket location
+        :param include_folders: if `True` - folder paths are included, defaults to `False`
+        :type include_folders: bool, optional
+
+        :return: list of paths to objects at NFS or bucket location
         :rtype: list[str]
         """
-
-        prefix = self.location.get_location().strip("/")
-
-        try:
-            flight_conn = self._prepare_flight_connection_for_discovery()
-
-            paths = [
-                r["path"]
-                for r in flight_conn.discovery(f"{prefix}")["assets"]
-                if r["type"] == "file"
-            ]
-        except Exception as e:
-            raise WMLClientError(
-                f"Could not retrieve file paths from connection. Reason: {e}"
-            )
-        else:
-            if paths:
-                return paths
-            else:
-                raise InvalidLocationInDataConnection(self.location.get_location())
-
-    def _get_file_paths_from_bucket(self) -> list[str]:
-        """Returns file paths (keys) of objects that are stored at a bucket location.
-
-        Returns all file paths under the ``self.location.get_location()`` prefix.
-        First checks if the prefix exists as a bucket "directory" - if not, treats prefix as the file name.
-
-        :return: list of file names (keys) of objects in a bucket location
-        :rtype: list[str]
-        """
+        include_types = {"file"}
+        if include_folders:
+            include_types.add("folder")
 
         prefix = self.location.get_location().strip("/")
 
@@ -412,10 +390,14 @@ class DataConnection(BaseDataConnection):
                 for r in flight_conn.discovery(f"/{self.location.bucket}/{prefix}")[
                     "assets"
                 ]
-                if r["type"] == "file"
+                if r["type"] in include_types
             ]
 
         except Exception as e:
+            if include_folders or isinstance(self.location, NFSLocation):
+                raise WMLClientError(
+                    f"Could not retrieve paths from connection. Reason: {e}"
+                )
             warn(f"Flight discovery didn't work, error: {e}")
             return self._get_file_paths_from_bucket_fallback()
         else:
@@ -465,10 +447,15 @@ class DataConnection(BaseDataConnection):
 
         return get_keys_with_prefix(bucket_objects, prefix)
 
-    def _get_connections_from_folder(self) -> list["DataConnection"]:
-        """Return connections for every object in a bucket location.
+    def _get_connections_from_folder(
+        self, include_folders: bool = False
+    ) -> list["DataConnection"]:
+        """Return connections for every file and folder (optional) in a bucket / NFS location.
 
         :raises WMLClientError: If location is not one of ``S3Location``, ``ContainerLocation``, ``NFSLocation``
+
+        :param include_folders: if `True` - connection for folders are included, defaults to `False`
+        :type include_folders: bool, optional
 
         :return: list of connections to objects in a bucket location
         :rtype: list[DataConnection]
@@ -485,29 +472,25 @@ class DataConnection(BaseDataConnection):
 
         new_data_connections = []
 
-        if isinstance(self.location, NFSLocation):
-            file_paths = self._get_file_paths_from_nfs_folder()
+        if isinstance(self.location, ContainerLocation):
+            self._check_if_connection_asset_is_s3()
 
-        else:
-            if isinstance(self.location, ContainerLocation):
-                self._check_if_connection_asset_is_s3()
+        paths = self._get_paths_from_location(include_folders)
 
-            file_paths = self._get_file_paths_from_bucket()
-
-        for file_path in file_paths:
+        for path in paths:
             if isinstance(self.location, NFSLocation):
                 new_data_conn = DataConnection(
                     connection=self.connection,
-                    location=NFSLocation(path=file_path),
+                    location=NFSLocation(path=path),
                 )
             elif isinstance(self.location, ContainerLocation):
                 new_data_conn = DataConnection(
-                    location=ContainerLocation(path=file_path),
+                    location=ContainerLocation(path=path),
                 )
             else:
                 new_data_conn = DataConnection(
                     connection=self.connection,
-                    location=S3Location(bucket=self.location.bucket, path=file_path),
+                    location=S3Location(bucket=self.location.bucket, path=path),
                 )
             if self._api_client:
                 new_data_conn.set_client(self._api_client)
@@ -1836,6 +1819,50 @@ class DataConnection(BaseDataConnection):
         """
         with open(filename, "wb") as file:
             file.write(self.read(binary=True))
+
+    def download_folder(self, local_dir: str | None = None) -> None:
+        """Download files from a folder and subfolders stored in a remote data storage and save to a local directory.
+
+        :param local_dir: path to the local directory where data will be downloaded, download to current working directory if not provided
+        :type local_dir: str, optional
+
+        **Examples**
+
+        .. code-block:: python
+
+            folder_reference = DataConnection(
+                connection_asset_id="<connection_id>",
+                location=S3Location(bucket="<bucket_name>", path="path/to/folder"),
+                )
+            folder_reference.download(local_dir="./data")
+
+        """
+        if not isinstance(self.location, (S3Location, ContainerLocation, NFSLocation)):
+            raise WMLClientError(
+                error_msg="Can't download folder from this DataConnection.",
+                reason="Location must be one of: `S3Location`, `ContainerLocation`, `NFSLocation`.",
+            )
+
+        if local_dir is None:
+            local_dir = os.getcwd()
+        else:
+            os.makedirs(local_dir, exist_ok=True)
+
+        file_extension = os.path.splitext(self.location.get_location())[1]
+        if file_extension:
+            raise WMLClientError(
+                "Location of the data connection does not point to a folder."
+            )
+
+        data_connections = self._get_connections_from_folder(include_folders=True)
+        for data_connection in data_connections:
+            extension = os.path.splitext(data_connection.location.get_location())[1]
+            item_name = os.path.basename(data_connection.location.get_location())
+            path = os.path.join(local_dir, item_name)
+            if extension:
+                data_connection.download(path)
+            else:
+                data_connection.download_folder(path)
 
     def _get_filename(self):
         """Get file name of the file in data connection, if applicable.

@@ -74,7 +74,7 @@ class Taxonomy:
         ]
 
         response = self._client.httpx_client.patch(
-            url=self._href_definitions.get_wx_taxonomy_href(self.id),
+            url=self._href_definitions.get_taxonomy_href(self.id),
             json=payload,
             params=self._client._params(),
             headers=self._client._get_headers(),

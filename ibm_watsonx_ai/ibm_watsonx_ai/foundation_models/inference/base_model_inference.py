@@ -61,8 +61,12 @@ class BaseModelInference(WMLResource, ABC):
         max_retries: int | None = None,
         delay_time: float | None = None,
         retry_status_codes: list[int] | None = None,
+        validate: bool = True,
     ):
         self._persistent_connection = persistent_connection
+
+        # to use in get_identifying_params(
+        self._validate = validate
 
         self._transport_params = requests._httpx_transport_params(client)
 

@@ -629,12 +629,15 @@ def load_file_from_file_system(
     # --- end note
 
     # note: prepare the file path
-    file_path = file_path.split("auto_ml/")[-1]
+    file_path = file_path.split("/assets/", 1)[-1]
     # --- end note
 
-    buffer = io.BytesIO()
+    url = (
+        api_client.service_instance._href_definitions.get_wsd_model_attachment_href()
+        + file_path
+    )
     response_with_model = requests.get(
-        url=f"{api_client.service_instance._href_definitions.get_wsd_model_attachment_href()}auto_ml/{file_path}",
+        url=url,
         headers=api_client._get_headers(),
         params=api_client._params(),
         stream=stream,
@@ -644,6 +647,7 @@ def load_file_from_file_system(
         200, "get asset file", response_with_model, json_response=False
     )
 
+    buffer = io.BytesIO()
     if stream:
         for data in response_with_model.iter_content():
             buffer.write(data)

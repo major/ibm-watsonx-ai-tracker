@@ -13,8 +13,7 @@ import logging
 from lomond import WebSocket
 from ibm_watsonx_ai.utils.autoai.enums import (
     PredictionType,
-    RegressionAlgorithms,
-    ClassificationAlgorithms,
+    TShirtSize,
     RunStateTypes,
     DataConnectionTypes,
     ImputationStrategy,
@@ -639,7 +638,11 @@ class ServiceEngine(BaseEngine):
             )
 
         # note: in new v4 api we have missing hw_spec name
-        t_size = self._auto_pipelines_parameters["t_shirt_size"]
+        t_size = self._auto_pipelines_parameters.get("t_shirt_size")
+        if t_size is None:
+            t_size = (
+                TShirtSize.M if self._api_client.ICP_PLATFORM_SPACES else ShirtSize.L
+            )
         if 0 < len(t_size) <= 2:
             self._pipeline_metadata[
                 self._api_client.pipelines.ConfigurationMetaNames.DOCUMENT

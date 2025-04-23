@@ -4,6 +4,8 @@
 #  -----------------------------------------------------------------------------------------
 
 import time
+from copy import deepcopy
+
 from pandas import DataFrame
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -399,7 +401,12 @@ class RAGEngine(WMLResource):
                         data_sorted_by_value, f"mean_{metric_name}", metric_item["mean"]
                     )
 
-            settings = result["context"]["rag_pattern"]["settings"]
+            settings = deepcopy(result["context"]["rag_pattern"]["settings"])
+
+            if "deployment_id" in settings.get("generation", {}):
+                settings["generation"]["model_id"] = settings["generation"].pop(
+                    "deployment_id"
+                )
 
             for key, sub_keys in setting_keys.items():
                 if key in settings:
@@ -496,13 +503,22 @@ class RAGEngine(WMLResource):
         generation_settings = pattern_details["context"]["rag_pattern"]["settings"][
             "generation"
         ]
-        model = ModelInference(
-            model_id=generation_settings["model_id"],
-            params=generation_settings["parameters"],
-            project_id=details["metadata"].get("project_id"),
-            space_id=details["metadata"].get("space_id"),
-            api_client=self._client,
-        )
+        if model_id := generation_settings.get("model_id"):
+            model = ModelInference(
+                model_id=model_id,
+                params=generation_settings["parameters"],
+                project_id=details["metadata"].get("project_id"),
+                space_id=details["metadata"].get("space_id"),
+                api_client=self._client,
+            )
+        else:
+            model = ModelInference(
+                deployment_id=generation_settings["deployment_id"],
+                params=generation_settings["parameters"],
+                project_id=details["metadata"].get("project_id"),
+                space_id=details["metadata"].get("space_id"),
+                api_client=self._client,
+            )
 
         from ibm_watsonx_ai.foundation_models.extensions.rag.chunker.langchain_chunker import (
             LangChainChunker,

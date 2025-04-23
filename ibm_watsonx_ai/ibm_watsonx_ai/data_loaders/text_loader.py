@@ -38,6 +38,9 @@ def _asynch_download(args):
                 doc.download()
                 qs_output[i].put(TextLoader(doc).load())
             except Exception as e:
+                if "cryptography>=3.1 is required for AES algorithm" in str(e):
+                    e = "Encrypted files are not supported. Please decrypt your file and try again."
+
                 qs_output[i].put(LoadingDocumentError(doc.document_id, e))
         except Empty:
             return

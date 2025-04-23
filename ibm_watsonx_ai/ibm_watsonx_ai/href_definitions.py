@@ -226,8 +226,7 @@ WKC_MODEL_LIST_ALL = "{}/v1/aigov/model_inventory/model_entries"
 TASK_CREDENTIALS = "{}/v1/task_credentials/{}"
 TASK_CREDENTIALS_ALL = "{}/v1/task_credentials"
 
-WX_TAXONOMY = "{}/v2/assets/{}/attributes/wx_taxonomy"
-GIT_BASED_WX_TAXONOMY = "{}/userfs/v2/assets/{}/attributes/wx_taxonomy"
+TAXONOMY = "{}/ml/v4/taxonomies/{}"
 TAXONOMIES_IMPORTS = "{}/ml/v1/tuning/taxonomies_imports"
 TAXONOMIES_IMPORT = "{}/ml/v1/tuning/taxonomies_imports/{}"
 DOCUMENT_EXTRACTIONS = "{}/ml/v1/tuning/documents"
@@ -852,12 +851,10 @@ class HrefDefinitions:
     def get_time_series_href(self) -> str:
         return FM_TIME_SERIES.format(self._credentials.url)
 
-    def get_wx_taxonomy_href(self, taxonomy_id: str) -> str:
-        return (
-            WX_TAXONOMY if not self._is_git_based_project() else GIT_BASED_WX_TAXONOMY
-        ).format(self._get_platform_url_if_exists(), taxonomy_id)
+    def get_taxonomy_href(self, taxonomy_id: str) -> str:
+        return TAXONOMY.format(self._credentials.url, taxonomy_id)
 
-    def get_taxonomies_imports_href(self):
+    def get_taxonomies_imports_href(self) -> str:
         return TAXONOMIES_IMPORTS.format(self._credentials.url)
 
     def get_taxonomies_import_href(self, taxonomy_import_id: str):

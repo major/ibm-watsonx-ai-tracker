@@ -302,7 +302,9 @@ class AutoPipelinesRuns(BaseAutoPipelinesRuns):
                 "timestamp_column_name": kb_parameters.get("timestamp_column"),
                 "holdout_size": kb_parameters.get("holdout_param"),
                 "max_num_daub_ensembles": kb_parameters.get("max_num_daub_ensembles"),
-                "t_shirt_size": kb_data["hardware_spec"]["id"],
+                "t_shirt_size": kb_data["hardware_spec"].get(
+                    "id", kb_data["hardware_spec"].get("name")
+                ),
                 "include_only_estimators": kb_parameters.get(
                     "daub_include_only_estimators"
                 ),
@@ -397,7 +399,9 @@ class AutoPipelinesRuns(BaseAutoPipelinesRuns):
                 "forecast_window": ts_parameters.get("prediction_horizon"),
                 "include_only_estimators": ts_parameters.get("include_only_estimators"),
                 "lookback_window": ts_parameters.get("lookback_window"),
-                "t_shirt_size": ts_data["hardware_spec"]["id"],
+                "t_shirt_size": ts_data["hardware_spec"].get(
+                    "id", ts_data["hardware_spec"].get("name")
+                ),
                 "csv_separator": csv_separator,
                 "encoding": encoding,
                 "feature_columns": ts_parameters.get("feature_columns"),
@@ -435,7 +439,9 @@ class AutoPipelinesRuns(BaseAutoPipelinesRuns):
                 "include_only_estimators": tsad_parameters.get(
                     "daub_include_only_estimators"
                 ),
-                "t_shirt_size": tsad_data["hardware_spec"]["id"],
+                "t_shirt_size": tsad_data["hardware_spec"].get(
+                    "id", tsad_data["hardware_spec"].get("name")
+                ),
                 "csv_separator": csv_separator,
                 "encoding": encoding,
                 "pipeline_types": tsad_parameters.get("pipelines"),

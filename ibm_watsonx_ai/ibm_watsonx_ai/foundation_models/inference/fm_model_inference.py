@@ -116,6 +116,7 @@ class FMModelInference(BaseModelInference):
             max_retries,
             delay_time,
             retry_status_codes,
+            validate=validate,
         )
 
     def get_details(self) -> dict:
@@ -490,6 +491,7 @@ class FMModelInference(BaseModelInference):
             ),
             "project_id": self._client.default_project_id,
             "space_id": self._client.default_space_id,
+            "validate": self._validate,
         }
 
     def _prepare_inference_payload(  # type: ignore[override]

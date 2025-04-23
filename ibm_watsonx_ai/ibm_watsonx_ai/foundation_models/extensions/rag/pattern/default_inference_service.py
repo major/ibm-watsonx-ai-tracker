@@ -111,6 +111,7 @@ def inference_service(context, vector_store_settings=None):
         model_id=REPLACE_THIS_CODE_WITH_MODEL_MODEL_ID,
         deployment_id=REPLACE_THIS_CODE_WITH_MODEL_DEPLOYMENT_ID,
         params=REPLACE_THIS_CODE_WITH_MODEL_PARAMS,
+        validate=REPLACE_THIS_CODE_WITH_MODEL_VALIDATE,
     )
 
     build_prompt_additional_kwargs = dict(
@@ -127,10 +128,16 @@ def inference_service(context, vector_store_settings=None):
         build_prompt_additional_kwargs["word_to_token_ratio"] = word_to_token_ratio
 
     def validate_messages(messages: list[dict]):
-        if len(messages) != 1 or messages[-1]["role"] != "user":
-            raise ValueError(
-                "The `messages` field must be an array containing only one dictionary representing the user's message."
-            )
+        if (
+            messages
+            and isinstance(messages, (list, tuple))
+            and messages[-1]["role"] == "user"
+        ):
+            return None
+
+        raise ValueError(
+            "The `messages` field must be an array containing objects, where the last one is representing user's message."
+        )
 
     def generate(context):
         """

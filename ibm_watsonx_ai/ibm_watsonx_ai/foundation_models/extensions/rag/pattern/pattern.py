@@ -31,14 +31,26 @@ from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_indexing_fu
 from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service import (
     inference_service as default_inference_service,
 )
+from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_deployment import (
+    inference_service as default_inference_service_deployment,
+)
 from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_chroma import (
     inference_service as default_inference_service_chroma,
+)
+from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_chroma_deployment import (
+    inference_service as default_inference_service_chroma_deployment,
 )
 from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_milvus import (
     inference_service as default_inference_service_milvus,
 )
+from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_milvus_deployment import (
+    inference_service as default_inference_service_milvus_deployment,
+)
 from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_elastic import (
     inference_service as default_inference_service_elastic,
+)
+from ibm_watsonx_ai.foundation_models.extensions.rag.pattern.default_inference_service_elastic_deployment import (
+    inference_service as default_inference_service_elastic_deployment,
 )
 
 from ibm_watsonx_ai.foundation_models.prompts import PromptTemplateManager
@@ -425,8 +437,12 @@ class RAGPattern:
         store_params_ai_service: dict | None
 
         if inference_service is None and inference_custom_asset is None:
+            self.model = cast(ModelInference, self.model)
             if self._input_data_references is not None:
-                inference_service = default_inference_service_chroma
+                if self.model.model_id is not None:
+                    inference_service = default_inference_service_chroma
+                else:
+                    inference_service = default_inference_service_chroma_deployment
             elif self.vector_store:
                 try:
                     from ibm_watsonx_ai.foundation_models.extensions.rag.vector_stores import (
@@ -434,7 +450,12 @@ class RAGPattern:
                     )
 
                     if isinstance(vector_store, MilvusVectorStore):
-                        inference_service = default_inference_service_milvus
+                        if self.model.model_id is not None:
+                            inference_service = default_inference_service_milvus
+                        else:
+                            inference_service = (
+                                default_inference_service_milvus_deployment
+                            )
                 except ImportError:
                     pass
                 if inference_service is None and hasattr(self, "ranker_config"):
@@ -447,13 +468,25 @@ class RAGPattern:
                     )
 
                     if isinstance(vector_store, ElasticsearchVectorStore):
-                        inference_service = default_inference_service_elastic
+                        if self.model.model_id is not None:
+                            inference_service = default_inference_service_elastic
+                        else:
+                            inference_service = (
+                                default_inference_service_elastic_deployment
+                            )
+
                 except ImportError:
                     pass
                 if inference_service is None:
-                    inference_service = default_inference_service
+                    if self.model.model_id is not None:
+                        inference_service = default_inference_service
+                    else:
+                        inference_service = default_inference_service_deployment
             else:
-                inference_service = default_inference_service
+                if self.model.model_id is not None:
+                    inference_service = default_inference_service
+                else:
+                    inference_service = default_inference_service_deployment
 
             store_params_ai_service = self.store_params or {}
             current_dir = Path(__file__).parent
@@ -496,9 +529,13 @@ class RAGPattern:
                 inference_service is el
                 for el in (
                     default_inference_service,
+                    default_inference_service_deployment,
                     default_inference_service_chroma,
+                    default_inference_service_chroma_deployment,
                     default_inference_service_milvus,
+                    default_inference_service_milvus_deployment,
                     default_inference_service_elastic,
+                    default_inference_service_elastic_deployment,
                 )
             ):
                 default_params = self._default_inference_service_params()
